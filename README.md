@@ -1,2 +1,7 @@
 # technical-analysis
-Scrapes stock market prices in yahoo finance and provides technical analysis of the chosen stock
+Scrapes stock market prices in yahoo finance and provides technical analysis of the chosen stock. Make sure that the ticker symbols you use to pull the data are recognized by yahoo finance (ex. APPL for Apple stocks, BTC-USD for Bitcoin)
+
+1. pip install requirements.txt
+2. create a .env file and add into it you OPEN_API_KEY for DEEPSEEK
+   I used Deepseek for my AI client.
+3. streamlit run app.py

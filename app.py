@@ -63,7 +63,7 @@ def fetch_stock_data(ticker, period="1y"):
         period = period if period in valid_periods else "1d"
         interval = interval_rules[period]
         
-        # Critical fix: Remove group_by parameter
+        # Fetch data with proper column handling
         df = yf.download(
             ticker,
             period=period,
@@ -75,14 +75,31 @@ def fetch_stock_data(ticker, period="1y"):
             st.error(f"No data found for {ticker}. Check ticker symbol.")
             return None
             
-        # Ensure standard column names
-        df.columns = df.columns.str.lower()
+        # Critical fix: Handle MultiIndex columns
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(1).str.lower()
+        else:
+            df.columns = df.columns.str.lower()
+            
+        # Ensure required columns exist
         required_columns = ['open', 'high', 'low', 'close', 'volume']
-        
         if not all(col in df.columns for col in required_columns):
             missing = [col for col in required_columns if col not in df.columns]
             st.error(f"Missing required columns: {', '.join(missing)}")
             return None
+            
+        # Filter market hours for intraday data
+        df.index = pd.to_datetime(df.index)
+        if interval.endswith('m'):
+            df = df.between_time('09:30', '16:00')
+            
+        return df
+        
+    except Exception as e:
+        st.error(f"Error fetching data: {str(e)}")
+        return None
+
+# Rest of your existing code remains the same
             
         # Filter market hours for intraday data
         df.index = pd.to_datetime(df.index)

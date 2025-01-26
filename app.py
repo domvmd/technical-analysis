@@ -118,7 +118,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
             data = stock_data.tail(30)  # Default to 30 days
 
         #Ensure only the last 60 candlesticks are displayed
-        data = data.tail(60)
+        #data = data.tail(60)
 
         # Describe the candlestick patterns
         description = (

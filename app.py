@@ -152,8 +152,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
                 },
                 {"role": "user", "content": description},
             ],
-            temperature=0.3,
-            max_tokens=500
+            temperature=0.3,            
         )
 
         # Extract the analysis result

@@ -204,20 +204,20 @@ def plot_predictions(stock_data, prediction, period):
         )
 
         # Create subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), gridspec_kw={'height_ratios': [3,1]})
-    
-    # Candlestick plot
-    mpf.plot(data, type='candle', style='yahoo', 
-             mav=(20,50), volume=ax2, ax=ax1,
-             title=f"{prediction['ticker']} Technical Analysis")
-    
-    # Add RSI
-    ax1_rsi = ax1.twinx()
-    ax1_rsi.plot(data['RSI'], color='purple', alpha=0.3)
-    ax1_rsi.axhline(30, linestyle='--', color='green', alpha=0.5)
-    ax1_rsi.axhline(70, linestyle='--', color='red', alpha=0.5)
-    
-    st.pyplot(fig)
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), gridspec_kw={'height_ratios': [3,1]})
+        
+        # Candlestick plot
+        mpf.plot(data, type='candle', style='yahoo', 
+                 mav=(20,50), volume=ax2, ax=ax1,
+                 title=f"{prediction['ticker']} Technical Analysis")
+        
+        # Add RSI
+        ax1_rsi = ax1.twinx()
+        ax1_rsi.plot(data['RSI'], color='purple', alpha=0.3)
+        ax1_rsi.axhline(30, linestyle='--', color='green', alpha=0.5)
+        ax1_rsi.axhline(70, linestyle='--', color='red', alpha=0.5)
+        
+        st.pyplot(fig)
 
         # Display the plot in Streamlit
         st.pyplot(plt.gcf())

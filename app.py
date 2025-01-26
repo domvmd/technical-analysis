@@ -49,7 +49,6 @@ def initialize_openai_client(api_key):
 def fetch_stock_data(ticker, period="1y"):
     """Fetch historical stock data with dynamic interval selection"""
     try:
-        # Map periods to optimal intervals
         interval_rules = {
             "1d": "60m",
             "5d": "60m",
@@ -60,17 +59,15 @@ def fetch_stock_data(ticker, period="1y"):
             "5y": "1d"
         }
         
-        # Validate period input
         valid_periods = list(interval_rules.keys())
         period = period if period in valid_periods else "1d"
         interval = interval_rules[period]
         
-        # Fetch data with timeout handling
+        # Critical fix: Remove group_by parameter
         df = yf.download(
             ticker,
             period=period,
             interval=interval,
-            group_by='ticker',
             timeout=10
         )
         
@@ -78,7 +75,16 @@ def fetch_stock_data(ticker, period="1y"):
             st.error(f"No data found for {ticker}. Check ticker symbol.")
             return None
             
-        # Convert index and filter market hours for intraday data
+        # Ensure standard column names
+        df.columns = df.columns.str.lower()
+        required_columns = ['open', 'high', 'low', 'close', 'volume']
+        
+        if not all(col in df.columns for col in required_columns):
+            missing = [col for col in required_columns if col not in df.columns]
+            st.error(f"Missing required columns: {', '.join(missing)}")
+            return None
+            
+        # Filter market hours for intraday data
         df.index = pd.to_datetime(df.index)
         if interval.endswith('m'):
             df = df.between_time('09:30', '16:00')
@@ -94,31 +100,33 @@ def fetch_stock_data(ticker, period="1y"):
 def calculate_technical_indicators(df):
     """Calculate technical indicators"""
     try:
-        # Ensure numeric type for all columns
-        for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-            
-        # Clean NaN values
-        df = df.dropna()
+        # Validate required columns
+        required_columns = ['open', 'high', 'low', 'close', 'volume']
+        if not all(col in df.columns for col in required_columns):
+            missing = [col for col in required_columns if col not in df.columns]
+            raise ValueError(f"Missing columns: {', '.join(missing)}")
 
-        # Moving averages with length validation
-        df["MA20"] = df["Close"].rolling(window=20).mean() if len(df) >= 20 else np.nan
-        df["MA50"] = df["Close"].rolling(window=50).mean() if len(df) >= 50 else np.nan
+        # Convert to numeric
+        df = df.apply(pd.to_numeric, errors='coerce').dropna()
 
-        # RSI calculation with error handling
-        delta = df["Close"].diff().dropna()
-        if not delta.empty:
-            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-            rs = gain / loss
-            df["RSI"] = 100 - (100 / (1 + rs))
-        else:
-            df["RSI"] = np.nan
+        # Calculate indicators
+        close = df['close']
+        
+        # Moving averages
+        df["ma20"] = close.rolling(window=20).mean() if len(df) >= 20 else np.nan
+        df["ma50"] = close.rolling(window=50).mean() if len(df) >= 50 else np.nan
+
+        # RSI calculation
+        delta = close.diff().dropna()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        df["rsi"] = 100 - (100 / (1 + rs))
 
         return df.dropna()
     except Exception as e:
         st.error(f"Error calculating indicators: {e}")
-        return df
+        return pd.DataFrame()
 
 # Function to analyze candlestick patterns using OpenAI
 def analyze_candlestick_patterns(client, stock_data, period):
@@ -400,20 +408,26 @@ def generate_pdf_report(prediction, analysis):
 def predict_next_day(ticker, period):
     """Generate stock prediction"""
     try:
-        # Fetch data using dynamic interval selection
         stock_data = fetch_stock_data(ticker, period=period)
-        if stock_data is None:
+        if stock_data is None or stock_data.empty:
             return None, None
 
-        # Calculate technical indicators
         stock_data = calculate_technical_indicators(stock_data)
+        if stock_data.empty:
+            return None, None
 
-        # Calculate prediction using simple model
-        returns = stock_data["Close"].pct_change().tail(5)
+        # Validate required columns for prediction
+        if 'close' not in stock_data.columns:
+            st.error("Missing 'close' price data")
+            return None, None
+
+        # Rest of prediction logic...
+        close = stock_data['close']
+        returns = close.pct_change().tail(5)
         avg_return = returns.mean()
-        last_close = float(stock_data["Close"].iloc[-1])
+        last_close = float(close.iloc[-1])
         predicted_price = last_close * (1 + avg_return)
-
+        
         # Calculate sentiment analysis
         sentiment_analysis = calculate_sentiment_analysis(stock_data)
 

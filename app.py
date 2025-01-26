@@ -127,7 +127,8 @@ def analyze_candlestick_patterns(client, stock_data, period):
             f"- Volume: {data['Volume'].values}\n"
             f"Please analyze only the significant **candlestick patterns** and provide insights. "
             f"Each candlestick represents a specific time interval (e.g., 1 hour or 1 day). "
-            f"Refer to them as '1st candlestick', '2nd candlestick', etc., instead of '1st hour' or '17th hour'."
+            f"Refer to them as '1st candlestick', '2nd candlestick', etc., instead of '1st hour' or '17th hour'. "
+            f"At the end of the summary, do a price prediction after 4, 8, and 12 months. "
         )
 
         # Send the description to OpenAI for analysis
@@ -138,7 +139,8 @@ def analyze_candlestick_patterns(client, stock_data, period):
                     "role": "system",
                     "content": "You are a technical analyst. Analyze the **candlestick patterns** and provide insights only on the significant ones."
                     "Give a suggestion on what **prices** to buy or sell the stock."
-                    "Refer to each candlestick as '1st candlestick', '2nd candlestick', etc., instead of '1st hour' or '17th hour'.",
+                    "Refer to each candlestick as '1st candlestick', '2nd candlestick', etc., instead of '1st hour' or '17th hour'."
+                    "At the end of the summary, do a price prediction after 4, 8, and 12 months.",
                 },
                 {"role": "user", "content": description},
             ],

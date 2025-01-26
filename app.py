@@ -31,7 +31,6 @@ plt.rcParams["grid.alpha"] = 0.3
 # Load environment variables
 load_dotenv()
 
-
 # Initialize OpenAI client
 def initialize_openai_client(api_key):
     """Initialize the OpenAI client with the provided API key."""
@@ -45,15 +44,12 @@ def initialize_openai_client(api_key):
         st.error(f"Error initializing OpenAI client: {e}")
         return None
 
-
 # Cache the fetch_stock_data function to avoid redundant API calls
-@st.cache_data(ttl=3600, show_spinner="Loading stock data...")  # Add TTL
+@st.cache_data(ttl=3600, show_spinner="Loading stock data...")
 def fetch_stock_data(ticker, period="1y"):
     """Fetch historical stock data with dynamic interval selection"""
     try:
-        # Add version to cache key
-        cache_version = 2.1
-        
+        # Map periods to optimal intervals
         interval_rules = {
             "1d": "60m",
             "5d": "60m",
@@ -64,10 +60,9 @@ def fetch_stock_data(ticker, period="1y"):
             "5y": "1d"
         }
         
-        # Force valid period input
+        # Validate period input
         valid_periods = list(interval_rules.keys())
         period = period if period in valid_periods else "1d"
-        
         interval = interval_rules[period]
         
         # Fetch data with timeout handling
@@ -76,14 +71,14 @@ def fetch_stock_data(ticker, period="1y"):
             period=period,
             interval=interval,
             group_by='ticker',
-            timeout=10  # Add timeout
+            timeout=10
         )
         
         if df.empty:
             st.error(f"No data found for {ticker}. Check ticker symbol.")
             return None
             
-        # Convert index and filter market hours
+        # Convert index and filter market hours for intraday data
         df.index = pd.to_datetime(df.index)
         if interval.endswith('m'):
             df = df.between_time('09:30', '16:00')
@@ -94,9 +89,8 @@ def fetch_stock_data(ticker, period="1y"):
         st.error(f"Error fetching data: {str(e)}")
         return None
 
-
 # Cache the calculate_technical_indicators function
-
+@st.cache_data
 def calculate_technical_indicators(df):
     """Calculate technical indicators"""
     try:
@@ -107,18 +101,11 @@ def calculate_technical_indicators(df):
         # Clean NaN values
         df = df.dropna()
 
-        # Moving averages (ensure enough data points)
-        if len(df) >= 20:
-            df["MA20"] = df["Close"].rolling(window=20).mean()
-        else:
-            df["MA20"] = np.nan
-            
-        if len(df) >= 50:
-            df["MA50"] = df["Close"].rolling(window=50).mean()
-        else:
-            df["MA50"] = np.nan
+        # Moving averages with length validation
+        df["MA20"] = df["Close"].rolling(window=20).mean() if len(df) >= 20 else np.nan
+        df["MA50"] = df["Close"].rolling(window=50).mean() if len(df) >= 50 else np.nan
 
-        # RSI with error handling
+        # RSI calculation with error handling
         delta = df["Close"].diff().dropna()
         if not delta.empty:
             gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
@@ -133,25 +120,19 @@ def calculate_technical_indicators(df):
         st.error(f"Error calculating indicators: {e}")
         return df
 
-
 # Function to analyze candlestick patterns using OpenAI
 def analyze_candlestick_patterns(client, stock_data, period):
     """Analyze candlestick patterns using OpenAI"""
     try:
-       #Use full dataset - no truncation needed
-        data = stock_data
+        data = stock_data.tail(60)  # Analyze last 60 periods
 
-        #Ensure only the last 60 candlesticks are displayed
-        #data = data.tail(60)
-
-        # Describe the candlestick patterns
         description = (
             f"The stock data for the selected period ({period}) shows the following candlestick patterns:\n"
-            f"- Open: {data['Open'].values}\n"
-            f"- High: {data['High'].values}\n"
-            f"- Low: {data['Low'].values}\n"
-            f"- Close: {data['Close'].values}\n"
-            f"- Volume: {data['Volume'].values}\n"
+            f"- Open: {data['Open'].values[-5:]}\n"  # Show last 5 values
+            f"- High: {data['High'].values[-5:]}\n"
+            f"- Low: {data['Low'].values[-5:]}\n"
+            f"- Close: {data['Close'].values[-5:]}\n"
+            f"- Volume: {data['Volume'].values[-5:]}\n"
             f"Please analyze ONLY TOP 5 significant **candlestick patterns** and provide insights considering: "
             f"\n1. Pattern strength and confirmation"
             f"\n2. Confluence with RSI/MA/Volume"
@@ -161,7 +142,6 @@ def analyze_candlestick_patterns(client, stock_data, period):
             f"At the end of the summary, do a price prediction after 4, 8, and 12 months. "
         )
 
-        # Send the description to OpenAI for analysis
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
@@ -182,13 +162,11 @@ def analyze_candlestick_patterns(client, stock_data, period):
             temperature=0.3,            
         )
 
-        # Extract the analysis result
         analysis = response.choices[0].message.content.strip()
         return analysis
     except Exception as e:
         st.error(f"Error in candlestick pattern analysis: {str(e)}")
         return "Unable to analyze candlestick patterns."
-
 
 # Function to plot predictions using candlestick chart
 def plot_predictions(stock_data, prediction, period):

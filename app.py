@@ -96,7 +96,7 @@ def fetch_stock_data(ticker, period="1y"):
 
 
 # Cache the calculate_technical_indicators function
-@st.cache_data
+
 def calculate_technical_indicators(df):
     """Calculate technical indicators"""
     try:

@@ -48,7 +48,20 @@ def initialize_openai_client(api_key):
 
 # Cache the fetch_stock_data function to avoid redundant API calls
 @st.cache_data
-def fetch_stock_data(ticker, period="1y", interval="1d"):
+def fetch_stock_data(ticker, period):
+    # Map periods to their optimal intervals
+    interval_rules = {
+        "1d": "60m",
+        "5d": "60m",
+        "1mo": "60m",  # Hourly for short periods
+        "3mo": "1d",
+        "6mo": "1d",
+        "1y": "1d",
+        "max": "1d"    # Daily for long periods
+    }
+    interval = interval_rules.get(period, "1d")  # Default to daily
+    data = yf.download(ticker, period=period, interval=interval)
+    return data
     """Fetch historical stock data"""
     try:
         stock = yf.Ticker(ticker)

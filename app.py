@@ -13,7 +13,7 @@ import warnings
 import json
 import streamlit as st
 import time
-from fpdf import FPDF
+from fpdf import FPDF  # For generating PDF reports
 import tempfile
 import zipfile
 
@@ -31,6 +31,7 @@ plt.rcParams["grid.alpha"] = 0.3
 # Load environment variables
 load_dotenv()
 
+
 # Initialize OpenAI client
 def initialize_openai_client(api_key):
     """Initialize the OpenAI client with the provided API key."""
@@ -44,6 +45,7 @@ def initialize_openai_client(api_key):
         st.error(f"Error initializing OpenAI client: {e}")
         return None
 
+
 # Cache the fetch_stock_data function to avoid redundant API calls
 @st.cache_data
 def fetch_stock_data(ticker, period="1y", interval="1d"):
@@ -54,16 +56,21 @@ def fetch_stock_data(ticker, period="1y", interval="1d"):
 
         # Check if the fetched data has at least 50 data points
         if len(df) < 50:
-            df = stock.history(period="3mo", interval="1d")
+            # If not, fetch more data by extending the period
+            extended_period = "3mo"  # Default to 3 months if insufficient data
+            df = stock.history(period=extended_period, interval="1d")
 
         if df.empty:
-            st.error(f"No data found for ticker: {ticker}. Please check the ticker symbol.")
+            st.error(
+                f"No data found for ticker: {ticker}. Please check the ticker symbol."
+            )
             return None
         df.index = pd.to_datetime(df.index)
         return df
     except Exception as e:
         st.error(f"Error fetching stock data: {e}")
         return None
+
 
 # Cache the calculate_technical_indicators function
 @st.cache_data
@@ -83,35 +90,45 @@ def calculate_technical_indicators(df):
         rs = gain / loss.replace(0, np.nan).ffill()
         df["RSI"] = 100 - (100 / (1 + rs))
         
-        return df.dropna()
+        return df.dropna()  # Remove initial NaN rows
     except Exception as e:
         st.error(f"Error calculating indicators: {e}")
         return df
+
 
 # Function to analyze candlestick patterns using OpenAI
 def analyze_candlestick_patterns(client, stock_data, period):
     """Analyze candlestick patterns using OpenAI with expert technical analysis"""
     try:
         # Get data for the selected period
-        period_map = {
-            "1d": 24, "5d": 120, "1mo": 30,
-            "6mo": 180, "1y": 365, "5y": 1825
-        }
-        data = stock_data.tail(period_map.get(period, 30))
+        if period == "1d":
+            data = stock_data.tail(24)  # 24 hours for 1 day
+        elif period == "5d":
+            data = stock_data.tail(120)  # 24 hours * 5 days = 120 hours
+        elif period == "1mo":
+            data = stock_data.tail(30)
+        elif period == "6mo":
+            data = stock_data.tail(180)
+        elif period == "1y":
+            data = stock_data.tail(365)
+        elif period == "5y":
+            data = stock_data.tail(1825)
+        else:
+            data = stock_data.tail(30)  # Default to 30 days
 
         # Enhanced description with technical indicators
         description = (
             f"Stock data for {period} period:\n"
-            f"Latest 10 data points:\n"
+            f"- Open/High/Low/Close/Volume: Latest 10 values shown\n"
             f"{data[['Open', 'High', 'Low', 'Close', 'Volume']].tail(10).to_string()}\n\n"
             f"Technical Indicators:\n"
             f"- 20-period MA: {data['MA20'].iloc[-1]:.2f}\n"
             f"- 50-period MA: {data['MA50'].iloc[-1]:.2f}\n"
             f"- RSI: {data['RSI'].iloc[-1]:.2f}\n\n"
-            f"Analyze TOP 5 significant candlestick patterns considering:\n"
-            f"1. Pattern strength and confirmation\n"
-            f"2. Confluence with RSI/MA/Volume\n"
-            f"3. Recent price action context"
+            f"Analyze ONLY TOP 5 significant candlestick patterns considering:"
+            f"\n1. Pattern strength and confirmation"
+            f"\n2. Confluence with RSI/MA/Volume"
+            f"\n3. Recent price action context"
         )
 
         # Expert system prompt
@@ -160,15 +177,26 @@ Format predictions with price ranges and confidence percentages
         st.error(f"Analysis error: {str(e)}")
         return "Analysis unavailable"
 
+
 # Function to plot predictions using candlestick chart
 def plot_predictions(stock_data, prediction, period):
     """Create visualization of stock data and predictions using candlestick chart"""
     try:
-        period_map = {
-            "1d": 24, "5d": 120, "1mo": 30,
-            "6mo": 180, "1y": 365, "5y": 1825
-        }
-        data = stock_data.tail(period_map.get(period, 30))
+        # Get data for the selected period
+        if period == "1d":
+            data = stock_data.tail(24)
+        elif period == "5d":
+            data = stock_data.tail(120)
+        elif period == "1mo":
+            data = stock_data.tail(30)
+        elif period == "6mo":
+            data = stock_data.tail(180)
+        elif period == "1y":
+            data = stock_data.tail(365)
+        elif period == "5y":
+            data = stock_data.tail(1825)
+        else:
+            data = stock_data.tail(30)
 
         # Create figure with subplots
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), 
@@ -195,22 +223,102 @@ def plot_predictions(stock_data, prediction, period):
 
         # Display in Streamlit
         st.pyplot(fig)
-        plt.close(fig)
+        plt.close(fig)  # Prevent figure accumulation
 
-        # Save plot
+        # Save plots and return paths
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
             fig.savefig(tmpfile.name, bbox_inches="tight", dpi=300)
             candlestick_img = tmpfile.name
 
-        return candlestick_img, None
+        return candlestick_img, None  # Return RSI image path if needed
 
     except Exception as e:
         st.error(f"Error in plotting: {str(e)}")
         return None, None
 
-# Rest of the functions (generate_pdf_report, predict_next_day, 
-# calculate_sentiment_analysis, and main) remain the same as in your original code
-# ... [Keep the rest of your code unchanged from the original version] ...
+
+# Function to generate PDF report
+def generate_pdf_report(prediction, analysis):
+    """Generate a PDF report with the analysis results"""
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    # Add title
+    pdf.cell(200, 10, txt="Stock Analysis Report", ln=True, align="C")
+
+    # Add prediction details
+    pdf.cell(200, 10, txt=f"Ticker: {prediction['ticker']}", ln=True)
+    pdf.cell(200, 10, txt=f"Current Price: ${prediction['last_close']:.2f}", ln=True)
+    pdf.cell(200, 10, txt=f"Predicted Price: ${prediction['predicted_price']:.2f}", ln=True)
+    pdf.cell(200, 10, txt=f"Predicted Change: {((prediction['predicted_price'] / prediction['last_close']) - 1) * 100:.1f}%", ln=True)
+    pdf.cell(200, 10, txt=f"Prediction Date: {prediction['prediction_date']}", ln=True)
+
+    # Add technical indicators
+    pdf.cell(200, 10, txt="Technical Indicators:", ln=True)
+    pdf.cell(200, 10, txt=f"20-hour MA: ${prediction['technical_indicators']['ma20']:.2f}", ln=True)
+    pdf.cell(200, 10, txt=f"50-hour MA: ${prediction['technical_indicators']['ma50']:.2f}", ln=True)
+    pdf.cell(200, 10, txt=f"RSI: {prediction['technical_indicators']['rsi']:.2f}", ln=True)
+
+    # Add market insight
+    pdf.cell(200, 10, txt="Market Insight:", ln=True)
+    pdf.cell(200, 10, txt=f"Summary: {prediction['market_insight']['summary']}", ln=True)
+    pdf.cell(200, 10, txt=f"Risk Level: {prediction['market_insight']['risk_level']}", ln=True)
+    pdf.cell(200, 10, txt=f"Recommendation: {prediction['market_insight']['recommendation']}", ln=True)
+
+    # Add candlestick pattern analysis
+    pdf.cell(200, 10, txt="Candlestick Pattern Analysis:", ln=True)
+    pdf.multi_cell(0, 10, txt=analysis)
+
+    # Save the PDF
+    pdf_output = f"{prediction['ticker']}_analysis_report.pdf"
+    pdf.output(pdf_output)
+    return pdf_output
+
+
+# Function to predict the next day's stock price
+def predict_next_day(ticker, period):
+    """Generate stock prediction"""
+    try:
+        # Fetch and store stock data
+        interval = "1h" if period in ["1d", "5d"] else "1d"
+        stock_data = fetch_stock_data(ticker, period=period, interval=interval)
+        if stock_data is None:
+            return None, None
+
+        # Calculate technical indicators
+        stock_data = calculate_technical_indicators(stock_data)
+
+        # Calculate prediction using simple model
+        returns = stock_data["Close"].pct_change().tail(5)
+        avg_return = returns.mean()
+        last_close = float(stock_data["Close"].iloc[-1])
+        predicted_price = last_close * (1 + avg_return)
+
+        # Prepare result
+        result = {
+            "ticker": ticker,
+            "predicted_price": predicted_price,
+            "last_close": last_close,
+            "prediction_date": (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d"),
+            "market_insight": {
+                "summary": "Analysis based on technical indicators and recent price movements.",
+                "risk_level": "LOW",
+                "recommendation": "HOLD",
+            },
+            "technical_indicators": {
+                "ma20": float(stock_data["MA20"].iloc[-1]),
+                "ma50": float(stock_data["MA50"].iloc[-1]),
+                "rsi": float(stock_data["RSI"].iloc[-1]),
+            },
+        }
+
+        return result, stock_data
+
+    except Exception as e:
+        st.error(f"Error in prediction: {e}")
+        return None, None
+
 
 # Streamlit App
 def main():
@@ -246,41 +354,34 @@ def main():
             st.error("Please enter a valid Deepseek API key to proceed.")
         else:
             with st.spinner("Analyzing stock data..."):
-                time.sleep(1)
+                time.sleep(1)  # Simulate a delay for demonstration
                 prediction, stock_data = predict_next_day(ticker, period)
 
                 if prediction and stock_data is not None:
                     # Display results
                     st.subheader("Stock Analysis Results")
-                    cols = st.columns(2)
-                    cols[0].write(f"**Ticker:** {prediction['ticker']}")
-                    cols[1].write(f"**Current Price:** ${prediction['last_close']:.2f}")
-                    cols[0].write(f"**Predicted Price:** ${prediction['predicted_price']:.2f}")
-                    cols[1].write(f"**Predicted Change:** {((prediction['predicted_price'] / prediction['last_close']) - 1) * 100:.1f}%")
+                    st.write(f"**Ticker:** {prediction['ticker']}")
+                    st.write(f"**Current Price:** ${prediction['last_close']:.2f}")
+                    st.write(f"**Predicted Price:** ${prediction['predicted_price']:.2f}")
+                    st.write(f"**Predicted Change:** {((prediction['predicted_price'] / prediction['last_close']) - 1) * 100:.1f}%")
                     st.write(f"**Prediction Date:** {prediction['prediction_date']}")
 
                     st.subheader("Technical Indicators")
-                    tech_cols = st.columns(3)
-                    tech_cols[0].write(f"**20-period MA:** ${prediction['technical_indicators']['ma20']:.2f}")
-                    tech_cols[1].write(f"**50-period MA:** ${prediction['technical_indicators']['ma50']:.2f}")
-                    tech_cols[2].write(f"**RSI:** {prediction['technical_indicators']['rsi']:.2f}")
+                    st.write(f"**20-hour MA:** ${prediction['technical_indicators']['ma20']:.2f}")
+                    st.write(f"**50-hour MA:** ${prediction['technical_indicators']['ma50']:.2f}")
+                    st.write(f"**RSI:** {prediction['technical_indicators']['rsi']:.2f}")
 
                     st.subheader("Market Insight")
-                    insight_cols = st.columns(3)
-                    insight_cols[0].write(f"**Summary:** {prediction['market_insight']['summary']}")
-                    insight_cols[1].write(f"**Risk Level:** {prediction['market_insight']['risk_level']}")
-                    insight_cols[2].write(f"**Recommendation:** {prediction['market_insight']['recommendation']}")
+                    st.write(f"**Summary:** {prediction['market_insight']['summary']}")
+                    st.write(f"**Risk Level:** {prediction['market_insight']['risk_level']}")
+                    st.write(f"**Recommendation:** {prediction['market_insight']['recommendation']}")
 
-                    # Clear session state for report files
-                    if "report_files" in st.session_state:
-                        del st.session_state.report_files
-
-                    # Analyze candlestick patterns
+                    # Analyze candlestick patterns using AI first
                     analysis = analyze_candlestick_patterns(client, stock_data, period)
                     st.subheader("Candlestick Pattern Analysis")
                     st.write(analysis)
 
-                    # Plot predictions
+                    # Plot predictions and get image paths
                     candlestick_img, rsi_img = plot_predictions(stock_data, prediction, period)
 
                     # Generate PDF report
@@ -291,9 +392,9 @@ def main():
                     with zipfile.ZipFile(zip_filename, "w") as zipf:
                         zipf.write(pdf_report, os.path.basename(pdf_report))
                         if candlestick_img:
-                            zipf.write(candlestick_img, f"{ticker}_candlestick.png")
+                            zipf.write(candlestick_img, f"{ticker}_candlestick_chart.png")
 
-                    # Download button
+                    # Single download button for ZIP file
                     st.subheader("Download All Reports")
                     with open(zip_filename, "rb") as f:
                         st.download_button(
@@ -304,10 +405,13 @@ def main():
                         )
 
                     if st.button("Analyze a Different Stock"):
+                        # Clear session state to reset the app
                         st.session_state.clear()
-                        st.rerun()
+                        st.rerun()  # Rerun the app to reset the UI
                 else:
                     st.error(f"Unable to analyze {ticker}. Please check the ticker symbol.")
 
+
+# Run the Streamlit app
 if __name__ == "__main__":
     main()

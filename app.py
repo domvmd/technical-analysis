@@ -48,40 +48,33 @@ def initialize_openai_client(api_key):
 
 # Cache the fetch_stock_data function to avoid redundant API calls
 @st.cache_data
-def fetch_stock_data(ticker, period):
-    # Map periods to their optimal intervals
-    interval_rules = {
-        "1d": "60m",
-        "5d": "60m",
-        "1mo": "60m",  # Hourly for short periods
-        "3mo": "1d",
-        "6mo": "1d",
-        "1y": "1d",
-        "max": "1d"    # Daily for long periods
-    }
-    interval = interval_rules.get(period, "1d")  # Default to daily
-    data = yf.download(ticker, period=period, interval=interval)
-    return data
-    """Fetch historical stock data"""
+def fetch_stock_data(ticker, period="1y"):
+    """Fetch historical stock data with dynamic interval selection"""
     try:
-        stock = yf.Ticker(ticker)
-        df = stock.history(period=period, interval=interval)
-
-        # Check if the fetched data has at least 50 data points
-        if len(df) < 50:
-            # If not, fetch more data by extending the period
-            extended_period = "1y"  # Default to 1 year if insufficient data
-            df = stock.history(period=extended_period, interval=interval)
-
+        # Map periods to optimal intervals
+        interval_rules = {
+            "1d": "60m",
+            "5d": "60m",
+            "1mo": "60m",
+            "3mo": "1d",
+            "6mo": "1d",
+            "1y": "1d",
+            "5y": "1d"
+        }
+        interval = interval_rules.get(period, "1d")
+        
+        # Fetch data with yf.download for better interval handling
+        df = yf.download(ticker, period=period, interval=interval)
+        
         if df.empty:
-            st.error(
-                f"No data found for ticker: {ticker}. Please check the ticker symbol."
-            )
+            st.error(f"No data found for {ticker}. Check ticker symbol.")
             return None
+            
         df.index = pd.to_datetime(df.index)
         return df
+        
     except Exception as e:
-        st.error(f"Error fetching stock data: {e}")
+        st.error(f"Error fetching data: {e}")
         return None
 
 
@@ -114,21 +107,8 @@ def calculate_technical_indicators(df):
 def analyze_candlestick_patterns(client, stock_data, period):
     """Analyze candlestick patterns using OpenAI"""
     try:
-        # Get data for the selected period
-        if period == "1d":
-            data = stock_data.tail(24)  # 24 hours for 1 day
-        elif period == "5d":
-            data = stock_data.tail(120)  # 24 hours * 5 days = 120 hours
-        elif period == "1mo":
-            data = stock_data.tail(30)
-        elif period == "6mo":
-            data = stock_data.tail(180)
-        elif period == "1y":
-            data = stock_data.tail(365)
-        elif period == "5y":
-            data = stock_data.tail(1825)
-        else:
-            data = stock_data.tail(30)  # Default to 30 days
+       #Use full dataset - no truncation needed
+        data = stock_data
 
         #Ensure only the last 60 candlesticks are displayed
         #data = data.tail(60)
@@ -186,21 +166,7 @@ def plot_predictions(stock_data, prediction, period):
         tuple: (candlestick_img_path, rsi_img_path)
     """
     try:
-        # Get data for the selected period
-        if period == "1d":
-            data = stock_data.tail(24)  # 24 hours for 1 day
-        elif period == "5d":
-            data = stock_data.tail(120)  # 24 hours * 5 days = 120 hours
-        elif period == "1mo":
-            data = stock_data.tail(30)
-        elif period == "6mo":
-            data = stock_data.tail(180)
-        elif period == "1y":
-            data = stock_data.tail(365)
-        elif period == "5y":
-            data = stock_data.tail(1825)
-        else:
-            data = stock_data.tail(30)  # Default to 30 days
+        data = stock_data
 
         # Create a candlestick chart
         mpf.plot(
@@ -425,11 +391,8 @@ def generate_pdf_report(prediction, analysis):
 def predict_next_day(ticker, period):
     """Generate stock prediction"""
     try:
-        # Fetch and store stock data
-        interval = (
-            "1h" if period in ["1d", "5d"] else "1d"
-        )  # Use hourly data for 1d and 5d
-        stock_data = fetch_stock_data(ticker, period=period, interval=interval)
+        # Fetch data using dynamic interval selection
+        stock_data = fetch_stock_data(ticker, period=period)
         if stock_data is None:
             return None, None
 

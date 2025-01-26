@@ -47,11 +47,13 @@ def initialize_openai_client(api_key):
 
 
 # Cache the fetch_stock_data function to avoid redundant API calls
-@st.cache_data
+@st.cache_data(ttl=3600, show_spinner="Loading stock data...")  # Add TTL
 def fetch_stock_data(ticker, period="1y"):
     """Fetch historical stock data with dynamic interval selection"""
     try:
-        # Map periods to optimal intervals
+        # Add version to cache key
+        cache_version = 2.1
+        
         interval_rules = {
             "1d": "60m",
             "5d": "60m",
@@ -61,20 +63,35 @@ def fetch_stock_data(ticker, period="1y"):
             "1y": "1d",
             "5y": "1d"
         }
-        interval = interval_rules.get(period, "1d")
         
-        # Fetch data with yf.download for better interval handling
-        df = yf.download(ticker, period=period, interval=interval)
+        # Force valid period input
+        valid_periods = list(interval_rules.keys())
+        period = period if period in valid_periods else "1d"
+        
+        interval = interval_rules[period]
+        
+        # Fetch data with timeout handling
+        df = yf.download(
+            ticker,
+            period=period,
+            interval=interval,
+            group_by='ticker',
+            timeout=10  # Add timeout
+        )
         
         if df.empty:
             st.error(f"No data found for {ticker}. Check ticker symbol.")
             return None
             
+        # Convert index and filter market hours
         df.index = pd.to_datetime(df.index)
+        if interval.endswith('m'):
+            df = df.between_time('09:30', '16:00')
+            
         return df
         
     except Exception as e:
-        st.error(f"Error fetching data: {e}")
+        st.error(f"Error fetching data: {str(e)}")
         return None
 
 
@@ -83,21 +100,35 @@ def fetch_stock_data(ticker, period="1y"):
 def calculate_technical_indicators(df):
     """Calculate technical indicators"""
     try:
-        # Ensure numeric type
-        df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
+        # Ensure numeric type for all columns
+        for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+        # Clean NaN values
+        df = df.dropna()
 
-        # Moving averages
-        df["MA20"] = df["Close"].rolling(window=20).mean()
-        df["MA50"] = df["Close"].rolling(window=50).mean()
+        # Moving averages (ensure enough data points)
+        if len(df) >= 20:
+            df["MA20"] = df["Close"].rolling(window=20).mean()
+        else:
+            df["MA20"] = np.nan
+            
+        if len(df) >= 50:
+            df["MA50"] = df["Close"].rolling(window=50).mean()
+        else:
+            df["MA50"] = np.nan
 
-        # RSI
-        delta = df["Close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        df["RSI"] = 100 - (100 / (1 + rs))
+        # RSI with error handling
+        delta = df["Close"].diff().dropna()
+        if not delta.empty:
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            df["RSI"] = 100 - (100 / (1 + rs))
+        else:
+            df["RSI"] = np.nan
 
-        return df
+        return df.dropna()
     except Exception as e:
         st.error(f"Error calculating indicators: {e}")
         return df

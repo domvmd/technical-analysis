@@ -117,37 +117,48 @@ def calculate_technical_indicators(df):
         return df
 
 
-# Function to analyze candlestick patterns using OpenAI
 def analyze_candlestick_patterns(client, stock_data, period):
-    """Analyze patterns using the FULL dataset (already period-fileterd_"""
+    """Analyze candlestick patterns using OpenAI"""
     try:
+        # Ensure sufficient data
+        if stock_data is None or len(stock_data) < 50:
+            return "Insufficient data for analysis"
+
+        # Extract the latest 50 rows
         latest_50 = stock_data.iloc[-50:]
 
-         # Convert to candlestick format
+        # Convert to candlestick format
         candles = []
         for idx, row in latest_50.iterrows():
             candles.append({
-                "date": idx.strftime("%Y-%m-%d"),
+                "date": idx.strftime("%Y-%m-%d"),  # Format date
                 "open": row["Open"],
                 "high": row["High"],
                 "low": row["Low"],
-                "close": row["Close"]
+                "close": row["Close"],
+                "volume": row["Volume"]
             })
 
-        # Describe the candlestick patterns
+        # Build description using the candles list
         description = (
             f"The stock data for the selected period ({period}) shows the following candlestick patterns:\n"
-            f"- Open: {data['Open'].values}\n"
-            f"- High: {data['High'].values}\n"
-            f"- Low: {data['Low'].values}\n"
-            f"- Close: {data['Close'].values}\n"
-            f"- Volume: {data['Volume'].values}\n"
-            f"Please analyze ONLY TOP 5 significant **candlestick patterns** and provide insights considering: "
-            f"\n1. Pattern strength and confirmation"
-            f"\n2. Confluence with RSI/MA/Volume"
-            f"\n3. Recent price action context"
-            f"Each candlestick represents a specific time interval (e.g., 1 hour or 1 day). "
-            f"Refer to them as '1st candlestick', '2nd candlestick', etc., instead of '1st hour' or '17th hour'. "            
+            f"Last 5 candlesticks as examples:\n"
+        )
+
+        # Add formatted candlestick details
+        description += "\n".join(
+            [f"{c['date']}: Open={c['open']:.2f}, High={c['high']:.2f}, Low={c['low']:.2f}, Close={c['close']:.2f}, Volume={c['volume']}"
+             for c in candles[-5:]]  # Use the last 5 candles for context
+        )
+
+        # Add analysis instructions
+        description += (
+            "\n\nPlease analyze ONLY TOP 5 significant **candlestick patterns** and provide insights considering: "
+            "\n1. Pattern strength and confirmation"
+            "\n2. Confluence with RSI/MA/Volume"
+            "\n3. Recent price action context"
+            "\nEach candlestick represents a specific time interval (e.g., 1 hour or 1 day). "
+            "Refer to them as '1st candlestick', '2nd candlestick', etc., instead of '1st hour' or '17th hour'."
         )
 
         # Send the description to OpenAI for analysis
@@ -184,7 +195,6 @@ def analyze_candlestick_patterns(client, stock_data, period):
                     - Avoid speculation
                     - Highlight key support/resistance
                     - Mention any divergence patterns"""
-                                      
                 },
                 {"role": "user", "content": description},
             ],

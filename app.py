@@ -105,7 +105,8 @@ def calculate_technical_indicators(df):
     rs = gain / loss
     df["RSI"] = 100 - (100 / (1 + rs))
 
-        return df
+    return df
+    
     except Exception as e:
         st.error(f"Error calculating indicators: {e}")
         return df

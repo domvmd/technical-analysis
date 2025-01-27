@@ -153,7 +153,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
 
         # Add analysis instructions
         description += (
-            "\n\nPlease analyze ONLY TOP 5 significant **candlestick patterns** and provide insights considering: "
+            "\n\nPlease analyze ONLY 5 significant **candlestick patterns** and provide insights considering: "
             "\n1. Pattern strength and confirmation"
             "\n2. Confluence with RSI/MA/Volume"
             "\n3. Recent price action context"
@@ -218,19 +218,19 @@ def plot_predictions(stock_data, prediction, period):
     try:
         # Get data for the selected period
         if period == "1d":
-            data = stock_data.tail(55)  # 24 hours for 1 day
+            data = stock_data.tail(70)  # 24 hours for 1 day
         elif period == "5d":
-            data = stock_data.tail(55)  # 24 hours * 5 days = 120 hours
+            data = stock_data.tail(70)  # 24 hours * 5 days = 120 hours
         elif period == "1mo":
-            data = stock_data.tail(55)
+            data = stock_data.tail(70)
         elif period == "6mo":
-            data = stock_data.tail(55)
+            data = stock_data.tail(70)
         elif period == "1y":
-            data = stock_data.tail(55)
+            data = stock_data.tail(70)
         elif period == "5y":
-            data = stock_data.tail(55)
+            data = stock_data.tail(70)
         else:
-            data = stock_data.tail(55)  # Default to 30 days
+            data = stock_data.tail(70)  # Default to 30 days
 
         # Create a candlestick chart
         mpf.plot(

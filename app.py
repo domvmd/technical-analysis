@@ -139,19 +139,20 @@ def analyze_candlestick_patterns(client, stock_data, period):
                 "volume": row["Volume"]
             })
 
+        # Build description using the candles list
+        description = (
+            f"The stock data for the selected period ({period}) shows the following candlestick patterns:\n"
+            f"Last 70 candlesticks as examples:\n"
+            f"\n\nPlease analyze 5 significant candlestick patterns and provide insights considering: "
+            f"\n1. Pattern strength and confirmation"
+            f"\n2. Confluence with RSI/MA/Volume"
+            f"\n3. Recent price action context"
+            f"\nEach candlestick represents a specific time interval (e.g., 1 hour or 1 day). " 
+            
         # Add formatted candlestick details
         description += "\n".join(
             [f"{c['date']}: Open={c['open']:.2f}, High={c['high']:.2f}, Low={c['low']:.2f}, Close={c['close']:.2f}, Volume={c['volume']}"
-             for c in candles[-70:]]  # Use the last 5 candles for context
-        )
-
-        # Add analysis instructions
-        description += (
-            "\n\nPlease analyze 5 significant candlestick patterns and provide insights considering: "
-            "\n1. Pattern strength and confirmation"
-            "\n2. Confluence with RSI/MA/Volume"
-            "\n3. Recent price action context"
-            "\nEach candlestick represents a specific time interval (e.g., 1 hour or 1 day). "            
+             for c in candles[-70:]]  # Use the last 70 candles for context
         )
 
         # Send the description to OpenAI for analysis
@@ -191,7 +192,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
                 },
                 {"role": "user", "content": description},
             ],
-            temperature=0.3,
+            temperature=0.6,
         )
 
         # Extract the analysis result

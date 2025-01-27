@@ -139,12 +139,6 @@ def analyze_candlestick_patterns(client, stock_data, period):
                 "volume": row["Volume"]
             })
 
-        # Build description using the candles list
-        description = (
-            f"The stock data for the selected period ({period}) shows the following candlestick patterns:\n"
-            f"Last 5 candlesticks as examples:\n"
-        )
-
         # Add formatted candlestick details
         description += "\n".join(
             [f"{c['date']}: Open={c['open']:.2f}, High={c['high']:.2f}, Low={c['low']:.2f}, Close={c['close']:.2f}, Volume={c['volume']}"

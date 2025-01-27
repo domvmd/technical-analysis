@@ -148,7 +148,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
         # Add formatted candlestick details
         description += "\n".join(
             [f"{c['date']}: Open={c['open']:.2f}, High={c['high']:.2f}, Low={c['low']:.2f}, Close={c['close']:.2f}, Volume={c['volume']}"
-             for c in candles[-5:]]  # Use the last 5 candles for context
+             for c in candles[-70:]]  # Use the last 5 candles for context
         )
 
         # Add analysis instructions
@@ -169,7 +169,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
                     "content": """You are a Chartered Market Technician (CMT) with 20 years experience. Analyze strictly the following rules:
                     
                     1. Pattern Analysis:
-                    - Identify MAXIMUM 5 most significant patterns
+                    - Identify AT MOST 5 significant patterns in the whole trend
                     - For each pattern:
                         * Name & location (e.g. '3rd candlestick: Bullish Engulfing')
                         * Confidence level (High/Medium/Low)

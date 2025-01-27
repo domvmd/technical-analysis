@@ -123,6 +123,17 @@ def analyze_candlestick_patterns(client, stock_data, period):
     try:
         latest_50 = stock_data.iloc[-50:]
 
+         # Convert to candlestick format
+        candles = []
+        for idx, row in latest_50.iterrows():
+            candles.append({
+                "date": idx.strftime("%Y-%m-%d"),
+                "open": row["Open"],
+                "high": row["High"],
+                "low": row["Low"],
+                "close": row["Close"]
+            })
+
         # Describe the candlestick patterns
         description = (
             f"The stock data for the selected period ({period}) shows the following candlestick patterns:\n"

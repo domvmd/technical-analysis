@@ -153,7 +153,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
 
         # Add analysis instructions
         description += (
-            "\n\nPlease analyze ONLY 5 significant **candlestick patterns** and provide insights considering: "
+            "\n\nPlease analyze 5 significant candlestick patterns and provide insights considering: "
             "\n1. Pattern strength and confirmation"
             "\n2. Confluence with RSI/MA/Volume"
             "\n3. Recent price action context"

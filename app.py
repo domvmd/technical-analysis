@@ -157,8 +157,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
             "\n1. Pattern strength and confirmation"
             "\n2. Confluence with RSI/MA/Volume"
             "\n3. Recent price action context"
-            "\nEach candlestick represents a specific time interval (e.g., 1 hour or 1 day). "
-            "Refer to them as '1st candlestick', '2nd candlestick', etc., instead of '1st hour' or '17th hour'."
+            "\nEach candlestick represents a specific time interval (e.g., 1 hour or 1 day). "            
         )
 
         # Send the description to OpenAI for analysis

@@ -218,19 +218,19 @@ def plot_predictions(stock_data, prediction, period):
     try:
         # Get data for the selected period
         if period == "1d":
-            data = stock_data.tail(24)  # 24 hours for 1 day
+            data = stock_data.tail(55)  # 24 hours for 1 day
         elif period == "5d":
-            data = stock_data.tail(120)  # 24 hours * 5 days = 120 hours
+            data = stock_data.tail(55)  # 24 hours * 5 days = 120 hours
         elif period == "1mo":
-            data = stock_data.tail(30)
+            data = stock_data.tail(55)
         elif period == "6mo":
-            data = stock_data.tail(180)
+            data = stock_data.tail(55)
         elif period == "1y":
-            data = stock_data.tail(365)
+            data = stock_data.tail(55)
         elif period == "5y":
-            data = stock_data.tail(1825)
+            data = stock_data.tail(55)
         else:
-            data = stock_data.tail(30)  # Default to 30 days
+            data = stock_data.tail(55)  # Default to 30 days
 
         # Create a candlestick chart
         mpf.plot(

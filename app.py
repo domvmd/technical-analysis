@@ -597,7 +597,7 @@ def calculate_sentiment_analysis(stock_data):
 
 # Streamlit App
 def main():
-    st.title("Papa Dom's Stock/Crypto Price Analysis App")
+    st.title("Chartered Narket Technologist Agent")
     st.write("Analyze stocks from the US and other markets or Cryptocurrency.")
 
     # Input Deepseek API key

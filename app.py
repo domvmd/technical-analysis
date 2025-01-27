@@ -148,7 +148,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
             f"\n2. Confluence with RSI/MA/Volume"
             f"\n3. Recent price action context"
             f"\nEach candlestick represents a specific time interval (e.g., 1 hour or 1 day). " 
-            
+        )  
         # Add formatted candlestick details
         description += "\n".join(
             [f"{c['date']}: Open={c['open']:.2f}, High={c['high']:.2f}, Low={c['low']:.2f}, Close={c['close']:.2f}, Volume={c['volume']}"

@@ -91,25 +91,29 @@ def fetch_stock_data(ticker, period="1y"):
 # Cache the calculate_technical_indicators function
 @st.cache_data
 def calculate_technical_indicators(df):
-    """Calculate indicators for high-frequency data"""
+    """Calculate technical indicators"""
     try:
         df["Close"] = pd.to_numeric(df["Close"])
         
-        # Use exponential moving averages for responsiveness
-        df["EMA20"] = df["Close"].ewm(span=20, adjust=False).mean()
-        df["EMA50"] = df["Close"].ewm(span=50, adjust=False).mean()
-        
-        # RSI
+        # For intraday data (high frequency)
+        if pd.infer_freq(df.index) in ['5T', '15T', '60T']:  # 5min, 15min, 1hr
+            df["EMA12"] = df["Close"].ewm(span=12, adjust=False).mean()
+            df["EMA26"] = df["Close"].ewm(span=26, adjust=False).mean()
+        # For daily data
+        else:
+            df["MA20"] = df["Close"].rolling(window=20).mean()
+            df["MA50"] = df["Close"].rolling(window=50).mean()
+
+        # RSI calculation remains universal
         delta = df["Close"].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / loss
         df["RSI"] = 100 - (100 / (1 + rs))
-    
+        
         return df
-    
     except Exception as e:
-        st.error(f"Error calculating indicators: {e}")
+        st.error(f"Indicator calculation failed: {e}")
         return df
 
 
@@ -462,9 +466,13 @@ def predict_next_day(ticker, period):
                 "recommendation": sentiment_analysis["recommendation"],
             },
             "technical_indicators": {
-                "ma20": float(stock_data["MA20"].iloc[-1]),
-                "ma50": float(stock_data["MA50"].iloc[-1]),
-                "rsi": float(stock_data["RSI"].iloc[-1]),
+                # For intraday data
+                "ema12": float(stock_data["EMA12"].iloc[-1]) if "EMA12" in stock_data else None,
+                "ema26": float(stock_data["EMA26"].iloc[-1]) if "EMA26" in stock_data else None,
+                # For daily data
+                "ma20": float(stock_data["MA20"].iloc[-1]) if "MA20" in stock_data else None,
+                "ma50": float(stock_data["MA50"].iloc[-1]) if "MA50" in stock_data else None,
+                "rsi": float(stock_data["RSI"].iloc[-1])
             },
         }
 

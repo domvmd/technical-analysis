@@ -62,7 +62,7 @@ def get_interval_and_period(period):
 @st.cache_data
 def fetch_stock_data(ticker, period="1y"):
     """Fetch historical stock data with adaptive intervals"""
-     try:
+    try:
         # Get interval dynamically from period
         interval, adjusted_period = get_interval_and_period(period)
         

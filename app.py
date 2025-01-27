@@ -54,8 +54,8 @@ def get_interval_and_period(period):
         "5d": ("15m", "1mo"),  # 15m interval (covers 1 month)
         "1mo": ("60m", "3mo"), # 1h interval
         "6mo": ("1d", "6mo"),  # Daily data
-        "1y": ("1d", "1y"),
-        "5y": ("1d", "5y")
+        "1y": ("1wk", "1y"),
+        "5y": ("1mo", "5y")
     }
     return interval_rules.get(period, ("1d", "1y"))  # Default fallback
 

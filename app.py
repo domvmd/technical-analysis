@@ -66,7 +66,7 @@ def fetch_stock_data(ticker, period="1y"):
         # Get interval dynamically from period
         interval, adjusted_period = get_interval_and_period(period)        
         stock = yf.Ticker(ticker)
-        df = stock.history(period=adjusted_period)  # Uses dynamic interval
+        df = stock.history(period=adjusted_period, interval=interval)  # Uses dynamic interval
         
         # Filter to only keep data within the original requested period
         if period == "1d":
@@ -430,11 +430,8 @@ def generate_pdf_report(prediction, analysis):
 def predict_next_day(ticker, period):
     """Generate stock prediction"""
     try:
-        # Fetch and store stock data
-        interval = (
-            "1h" if period in ["1d", "5d"] else "1d"
-        )  # Use hourly data for 1d and 5d
-        stock_data = fetch_stock_data(ticker, period=period, interval=interval)
+        # Fetch data WITHOUT interval parameter
+        stock_data = fetch_stock_data(ticker, period=period)  # <- Key fix here
         if stock_data is None:
             return None, None
 

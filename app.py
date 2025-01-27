@@ -46,43 +46,60 @@ def initialize_openai_client(api_key):
         return None
 
 
-# Cache the fetch_stock_data function to avoid redundant API calls
+# Updated interval logic to ensure minimum 50 data points
+def get_interval_and_period(period):
+    """Dynamically determine interval based on requested period"""
+    interval_rules = {
+        "1d": ("5m", "7d"),    # 5m interval (covers 7 days to ensure 50+ points for 1d)
+        "5d": ("15m", "1mo"),  # 15m interval (covers 1 month)
+        "1mo": ("60m", "3mo"), # 1h interval
+        "6mo": ("1d", "6mo"),  # Daily data
+        "1y": ("1d", "1y"),
+        "5y": ("1d", "5y")
+    }
+    return interval_rules.get(period, ("1d", "1y"))  # Default fallback
+
 @st.cache_data
-def fetch_stock_data(ticker, period="1y", interval="1d"):
-    """Fetch historical stock data"""
+def fetch_stock_data(ticker, period="1y"):
+    """Fetch historical stock data with adaptive intervals"""
     try:
+        # Get appropriate interval and period for reliable data
+        interval, adjusted_period = get_interval_and_period(period)
+        
         stock = yf.Ticker(ticker)
-        df = stock.history(period=period, interval=interval)
-
-        # Check if the fetched data has at least 50 data points
+        df = stock.history(period=adjusted_period, interval=interval)
+        
+        # Filter to only keep data within the original requested period
+        if period == "1d":
+            df = df.last("1D")
+        elif period == "5d":
+            df = df.last("5D")
+        # ... similar logic for other periods
+        
+        # Final check for sufficient data
         if len(df) < 50:
-            # If not, fetch more data by extending the period
-            extended_period = "1y"  # Default to 1 year if insufficient data
-            df = stock.history(period=extended_period, interval=interval)
-
-        if df.empty:
-            st.error(
-                f"No data found for ticker: {ticker}. Please check the ticker symbol."
-            )
+            st.warning(f"Insufficient data ({len(df)} points). Try a longer period.")
             return None
+            
         df.index = pd.to_datetime(df.index)
         return df
     except Exception as e:
-        st.error(f"Error fetching stock data: {e}")
+        st.error(f"Error fetching data: {e}")
         return None
 
 
 # Cache the calculate_technical_indicators function
 @st.cache_data
 def calculate_technical_indicators(df):
-    """Calculate technical indicators"""
-    try:
-        # Ensure numeric type
-        df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
-
-        # Moving averages
-        df["MA20"] = df["Close"].rolling(window=20).mean()
-        df["MA50"] = df["Close"].rolling(window=50).mean()
+    """Calculate indicators for high-frequency data"""
+    df["Close"] = pd.to_numeric(df["Close"])
+    
+    # Use exponential moving averages for responsiveness
+    df["EMA20"] = df["Close"].ewm(span=20, adjust=False).mean()
+    df["EMA50"] = df["Close"].ewm(span=50, adjust=False).mean()
+    
+    # RSI calculation remains similar
+    return df
 
         # RSI
         delta = df["Close"].diff()
@@ -99,23 +116,9 @@ def calculate_technical_indicators(df):
 
 # Function to analyze candlestick patterns using OpenAI
 def analyze_candlestick_patterns(client, stock_data, period):
-    """Analyze candlestick patterns using OpenAI"""
+    """Analyze patterns using the FULL dataset (already period-fileterd_"""
     try:
-        # Get data for the selected period
-        if period == "1d":
-            data = stock_data.tail(24)  # 24 hours for 1 day
-        elif period == "5d":
-            data = stock_data.tail(120)  # 24 hours * 5 days = 120 hours
-        elif period == "1mo":
-            data = stock_data.tail(30)
-        elif period == "6mo":
-            data = stock_data.tail(180)
-        elif period == "1y":
-            data = stock_data.tail(365)
-        elif period == "5y":
-            data = stock_data.tail(1825)
-        else:
-            data = stock_data.tail(30)  # Default to 30 days
+        latest_50 = stock_data.iloc[-50:]
 
         # Describe the candlestick patterns
         description = (

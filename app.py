@@ -92,6 +92,7 @@ def fetch_stock_data(ticker, period="1y"):
 @st.cache_data
 def calculate_technical_indicators(df):
     """Calculate indicators for high-frequency data"""
+    try:
     df["Close"] = pd.to_numeric(df["Close"])
     
     # Use exponential moving averages for responsiveness

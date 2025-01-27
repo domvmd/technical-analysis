@@ -64,10 +64,9 @@ def fetch_stock_data(ticker, period="1y"):
     """Fetch historical stock data with adaptive intervals"""
     try:
         # Get interval dynamically from period
-        interval, adjusted_period = get_interval_and_period(period)
-        
+        interval, adjusted_period = get_interval_and_period(period)        
         stock = yf.Ticker(ticker)
-        df = stock.history(period=adjusted_period, interval=interval)  # Uses dynamic interval
+        df = stock.history(period=adjusted_period)  # Uses dynamic interval
         
         # Filter to only keep data within the original requested period
         if period == "1d":
@@ -83,6 +82,7 @@ def fetch_stock_data(ticker, period="1y"):
             
         df.index = pd.to_datetime(df.index)
         return df
+        
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return None

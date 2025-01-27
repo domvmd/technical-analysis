@@ -62,12 +62,12 @@ def get_interval_and_period(period):
 @st.cache_data
 def fetch_stock_data(ticker, period="1y"):
     """Fetch historical stock data with adaptive intervals"""
-    try:
-        # Get appropriate interval and period for reliable data
+     try:
+        # Get interval dynamically from period
         interval, adjusted_period = get_interval_and_period(period)
         
         stock = yf.Ticker(ticker)
-        df = stock.history(period=adjusted_period, interval=interval)
+        df = stock.history(period=adjusted_period, interval=interval)  # Uses dynamic interval
         
         # Filter to only keep data within the original requested period
         if period == "1d":

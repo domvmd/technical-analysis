@@ -51,7 +51,7 @@ def get_interval_and_period(period):
     """Dynamically determine interval based on requested period"""
     interval_rules = {
         "1d": ("5m", "1d"),    # 5m interval (covers 7 days to ensure 50+ points for 1d)
-        "5d": ("30m", "5d"),  # 15m interval (covers 1 month)
+        "5d": ("15m", "5d"),  # 15m interval (covers 1 month)
         "1mo": ("90m", "1mo"), # 1h interval
         "6mo": ("1d", "6mo"),  # Daily data
         "1y": ("1wk", "1y"),

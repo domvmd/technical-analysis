@@ -143,7 +143,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
         description = (
             f"The stock data for the selected period ({period}) shows the following candlestick patterns:\n"
             f"Last 70 candlesticks as examples:\n"
-            f"\n\nPlease analyze 5 significant candlestick patterns starting from the last candlestick and provide insights considering: "
+            f"\n\nPlease analyze 5 candlestick patterns that influences price trends and provide insights considering: "
             f"\n1. Pattern strength and confirmation"
             f"\n2. Confluence with RSI/MA/Volume"
             f"\n3. Recent price action context"
@@ -164,9 +164,9 @@ def analyze_candlestick_patterns(client, stock_data, period):
                     "content": """You are a Chartered Market Technician (CMT) with 20 years experience. Analyze strictly the following rules:
                     
                     1. Pattern Analysis:
-                    - Identify AT MOST 5 significant patterns in the whole trend
+                    - Identify significant patterns in the whole trend
                     - For each pattern:
-                        * Name & location (e.g. '3rd candlestick: Bullish Engulfing')
+                        * Name & location (e.g. '56th candlestick: Bullish Engulfing')
                         * Confidence level (High/Medium/Low)
                         * Key confirmation factors (volume, indicator alignment)
                         * Immediate price implications

@@ -143,7 +143,7 @@ def analyze_candlestick_patterns(client, stock_data, period):
         description = (
             f"The stock data for the selected period ({period}) shows the following candlestick patterns:\n"
             f"Last 70 candlesticks as examples:\n"
-            f"\n\nPlease analyze 5 significant candlestick patterns and provide insights considering: "
+            f"\n\nPlease analyze 5 significant candlestick patterns starting from the last candlestick and provide insights considering: "
             f"\n1. Pattern strength and confirmation"
             f"\n2. Confluence with RSI/MA/Volume"
             f"\n3. Recent price action context"
